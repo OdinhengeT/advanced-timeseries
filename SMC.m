@@ -3,7 +3,7 @@ close all
 clc
 %% Generate Data %%
 % Define parameters
-T = 100;                                                                    % Number of time steps
+T = 1000;                                                                    % Number of time steps
 
 % True parameter value
 true_a = -0.5;
@@ -25,30 +25,31 @@ plot(obs_y)
 % Define Observation and Transition densities
 numParticles = [1000 2];
 %ObservationDensity = @(y, state) state(:,1) + randn(numParticles(1), 1);      % Observation density,  p(y_k | x_k)  
-A = [1 1; 0 1];
-C = [1 0];
 
-ObservationDensity = @(y,x) normpdf(y,x*C',1); 
-TransitionDensity = @(state, B) state * A' + B.*randn(numParticles);  % Transition density,   q(x_k+1 | x_k)
+ObservationDensity = @(y,state) normpdf(y,state(:,1),1); 
+TransitionDensity = @(state, t) [state(:,2).*exp(state(:,1)), state(:,2)] + [1, 1/t] .* randn(numParticles);  % Transition density,   q(x_k+1 | x_k)
 
 states = SMC_estimate(obs_y, ObservationDensity, TransitionDensity, numParticles);
 
-
 %%
 figure()
-subplot(2,1,1)
+subplot(3,1,1)
 plot(1:T,true_x)
 hold on
 plot(1:T,states(:,1))
 legend('true x', 'estimated x')
 
-subplot(2,1,2)
+subplot(3,1,2)
 plot(1:T,true_a*ones(T,1))
 hold on
 plot(1:T,states(:,2))
 legend('true a', 'estimated a')
+
+subplot(3,1,3)
+plot(1:T,abs(true_a*ones(T,1)-states(:,2)))
+legend('a error')
 %% Estimate the State Space %%
-numParticles = 1000;                                                        % Number of particles
+numParticles = 100;                                                        % Number of particles
 
 % Define Observation and Transition densities
 sigma_e = 1;
@@ -95,14 +96,18 @@ end
 
 %%
 figure()
-subplot(2,1,1)
+subplot(3,1,1)
 plot(1:T,true_x)
 hold on
 plot(1:T,estimated_x)
 legend('true x', 'estimated x')
 
-subplot(2,1,2)
+subplot(3,1,2)
 plot(1:T,true_a*ones(T,1))
 hold on
 plot(1:T,estimated_a)
 legend('true a', 'estimated a')
+
+subplot(3,1,3)
+plot(1:T,abs(true_a*ones(T,1)-estimated_a))
+legend('a error')
