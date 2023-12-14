@@ -3,7 +3,7 @@ close all
 clc
 %% Generate Data %%
 % Define parameters
-T = 1000;                                                                    % Number of time steps
+T = 100;                                                                    % Number of time steps
 
 % True parameter value
 true_a = -0.5;
