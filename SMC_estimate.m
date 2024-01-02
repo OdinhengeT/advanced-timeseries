@@ -19,14 +19,12 @@ for t = 1:T
 
     % Update weights
     weights = ObservationDensity(data(t), particles);                       % Measurement likelihood
-    
-    % Selection and Resampling
-    resampledIndices = randsample(1:numParticles(1), numParticles(1), true, weights);
-    particles = particles(resampledIndices,:);
-
     % State estimation
     weights = weights / sum(weights);                                       % Normalize weights
     estimated_states(t,:) = sum(weights .* particles);                      % Simplified since weights are already normalized
+    % Selection and Resampling
+    resampledIndices = randsample(1:numParticles(1), numParticles(1), true, weights);
+    particles = particles(resampledIndices,:);
 end
 end
 

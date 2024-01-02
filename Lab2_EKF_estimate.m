@@ -5,7 +5,7 @@ clc
 
 %% Simulate data
 a = 0.4;
-N = 10000;
+N = 1000;
 num_simulations = 20;
 Y = zeros(num_simulations, N);
 extra_n = 100;
@@ -43,7 +43,27 @@ figure()
 plot(AEst)
 xlabel("Iteration",'fontweight','bold','fontsize',12);
 ylabel("â",'fontweight','bold','fontsize',12);
-title("Estimation of the parameter a = 0.4");
+title("Estimation of the parameter a = 0.4, SMC");
+grid on
+
+%%
+numParticles = 1000;
+numStates = 1;
+numParams = 1;
+ObservationDensity = @(y,state, numParticles) normpdf(y,state(:,1),1); 
+TransitionDensity = @(state, t, numParticles) [state(:,2).*state(:,1), state(:,2)] + [1, 1/(t^(2/3))] .* randn(numParticles, numStates+numParams);  % Transition density,   q(x_k+1 | x_k)
+
+AEst = zeros(N,20);
+for i = 1:20 
+    [state params] = EIF_estimate(Y(:,i), ObservationDensity, TransitionDensity, numStates, numParams);
+    AEst(:,i) = params;
+    i = i
+end
+figure()
+plot(AEst)
+xlabel("Iteration",'fontweight','bold','fontsize',12);
+ylabel("â",'fontweight','bold','fontsize',12);
+title("Estimation of the parameter a = 0.4, EIF");
 grid on
 
 
