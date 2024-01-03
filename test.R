@@ -20,8 +20,8 @@ plot(ElGeneina$nvdi_t, ElGeneina$nvdi)
 data = data.frame(
   t = ElGeneina$rain_org_t,
   tYear = ElGeneina$rain_org_t %% 1,  # TIME OF YEAR BETWEEN 0 AND 1
-  # ElGeneina$rain_org
-  obsZ = log(ElGeneina$rain_org + 1) # LAMPERTI TRANSFORMATION 
+  obsY = ElGeneina$rain_org,
+  obsZ = log(ElGeneina$rain_org/0.75 + 1) # LAMPERTI TRANSFORMATION 
 )
 
 moddata = data[1:382,]
@@ -33,23 +33,29 @@ valdata = data[383:480,]
 
 model <- ctsm()
 
-model$addSystem( dX1 ~ (-w * X2 - 0.05 * X1*( (X1)^2 + (X2)^2 - c^2) )*dt + exp(p11)*dw1 )
-model$addSystem( dX2 ~ ( w * X1 - 0.05 * X2*( (X1)^2 + (X2)^2 - c^2) )*dt + exp(p22)*dw2 )
+model$addSystem( dR ~ ( mu*(r0 - R) )*dt + exp(p11)*dw1 )
+model$addSystem( dTheta ~ ( w )*dt + exp(p22)*dw2 )
 
-model$addObs(obsZ ~ b*(exp(c + X2) - 1) )
+#model$addSystem( dZ ~ ( exp(R*(1+sin(Theta)) - Z) - 0.5 )*dt + exp(p33)*dw3 )
+# ( mu*(r0-R)*(1+sin(Theta)) + R*w*cos(Theta))*
+
+model$addObs(obsZ ~ a*(exp(R*(1+sin(Theta))) - 1.0) )
 
 model$setVariance(obsZ ~ exp(e11))
 
-model$setParameter(X1 = c(init = -2, lb = -5, ub = 5))
-model$setParameter(X2 = c(init = -2, lb = -5, ub = 5))
+model$setParameter(R = c(init = 6, lb = 0.01, ub = 10))
+model$setParameter(Theta = c(init = -pi/2, lb = -pi, ub = pi))
+model$setParameter(Z = c(init = 0, lb = -10, ub = 10))
 
-model$setParameter(b = c(init = 0.01, lb = 0.005, ub = 0.02))
-
-model$setParameter(c = c(init = 5.2, lb = 0.1, ub = 15))
+model$setParameter(a = c(init = 1, lb = 0.1, ub = 10))
+#model$setParameter(b = c(init = 0.75, lb = 0.01, ub = 1000))
+model$setParameter(r0 = c(init = 5, lb = 0.005, ub = 10))
+model$setParameter(mu = c(init = 0.3, lb = 0.005, ub = 0.8))
 model$setParameter(w = c(init = 6.4, lb = 1, ub = 10))
 
-model$setParameter(p11 = c(init = 4, lb = -9, ub = 10))
-model$setParameter(p22 = c(init = 4, lb = -9, ub = 10))
+model$setParameter(p11 = c(init = 1, lb = -9, ub = 10))
+model$setParameter(p22 = c(init = 1, lb = -9, ub = 10))
+model$setParameter(p33 = c(init = 3, lb = -9, ub = 10))
 
 model$setParameter(e11 = c(init = -1, lb = -9, ub = 10))
 
@@ -69,15 +75,20 @@ plot(moddata$t, residual, type = 'l')
 
 ## VALIDATION DATA
 
-Pred <- predict(fit, newdata = data, n.ahead = 1)
+predlags = 12
+
+Pred <- predict(fit, newdata = data, n.ahead = predlags)
 
 plot(valdata$t, valdata$obsZ, type = 'l')
-lines(valdata$t, Pred$output$pred$obsZ[383:480], col="red")
+lines( valdata$t, Pred$output$pred$obsZ[383:480], col="red")
 
-residual = valdata$obsZ -  Pred$output$pred$obsZ[383:480]
+plot(valdata$t, valdata$obsY)
+lines(valdata$t, 0.75 * (exp(Pred$output$pred$obsZ[383:480]) - 1), col="red")
+
+
+residual = valdata$obsY - 0.75 * (exp(Pred$output$pred$obsZ[383:480]) - 1)
 
 plot(valdata$t, residual, type = 'l')
-
 
 
 

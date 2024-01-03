@@ -62,7 +62,9 @@ for t = 2:length(Y)
     
     phase_noise = 0.2 .* sqrt(dt) .* randn(1) .* [Y(2, t-1); -Y(1, t-1)]./norm(Y(:, t-1));
     
-    Y(:,t) = RK4step(func_derivative, param, t*dt, Y(:,t-1), dt) + rad_noise + phase_noise;
+    Y(:,t) = RK4step(func_derivative, param, t*dt, Y(:,t-1), dt) + 0.2 .* [0;1] .* sqrt(dt) .* randn(1);
+    
+    % + rad_noise + phase_noise;
 end
 
 t = 0:dt:T;
@@ -96,6 +98,72 @@ ylabel('Value')
 grid on; hold off;
 subplot(1,2,2); hold on;
 plot(Y(1,:), Y3)
+title('Phase Portrait')
+xlabel('Y1')
+ylabel('Y2')
+grid on; hold off;
+sgtitle({'Simulation of my SDE'})
+
+%%
+clear all;
+close all;
+clc;
+
+param = [3.14, 0.45, 6.29];
+
+func_derivative = @(t, X, param) [
+    param(2) .* ( param(1) - X(1,:) );
+    param(3);
+];
+
+dt = 1/12;
+
+T = 30;
+Y_0 = [3.5, -1.8, -1];
+
+Y = zeros( 3, ceil(T/dt)+1 );
+Y(:,1) = Y_0';
+
+sigma_r = exp(-6.4);
+sigma_theta = exp(-1.4);
+sigma_Z = exp(1.75);
+
+sigma = [sigma_r, sigma_theta, sigma_Z]';
+
+for t = 2:length(Y)
+    Y(:,t) = RK4step(func_derivative, param, t*dt, Y(:,t-1), dt) + sqrt(dt) .* sigma .* randn(3,1);
+end
+
+t = 0:dt:T;
+
+figure('Position', [100, 100, 800, 400]);
+subplot(1,2,1); hold on;
+plot(t, Y(1,:) )
+plot(t, mod(Y(2,:), 2*pi) )
+plot(t, Y(3,:))
+title('Realizations')
+legend('R', 'w', 'Z')
+xlabel('time')
+ylabel('Value')
+grid on; hold off;
+subplot(1,2,2); hold on;
+plot( Y(1,:).*cos(Y(2,:)), Y(1,:).*sin(Y(2,:)) )
+title('Phase Portrait')
+xlabel('Y1')
+ylabel('Y2')
+grid on; hold off;
+sgtitle({'Simulation of my SDE'})
+
+figure('Position', [100, 100, 800, 400]);
+subplot(1,2,1); hold on;
+plot(t, 0.75 .* (exp(Y(1,:) .* (1 + sin(Y(2,:)))) - 1))
+title('Realizations')
+legend('Y3')
+xlabel('time')
+ylabel('Value')
+grid on; hold off;
+subplot(1,2,2); hold on;
+plot(Y(1,:).*cos(Y(2,:)), 0.75 .* (exp(Y(1,:) .* (1 + sin(Y(2,:)))) - 1))
 title('Phase Portrait')
 xlabel('Y1')
 ylabel('Y2')

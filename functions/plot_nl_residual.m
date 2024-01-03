@@ -1,9 +1,10 @@
 
-function [] = plot_residual(Residual, name, maxLag, zeroLag, signLvl)
-if nargin < 5; signLvl = 0.05;                      end
-if nargin < 4; zeroLag = true;                      end
-if nargin < 3; maxLag = round(length(Residual)/4);  end
+function [] = plot_nl_residual(Residual, name, maxLag, lambda, zeroLag, signLvl)
 if nargin < 2; name = '';                           end
+if nargin < 3; maxLag = 25;                         end
+if nargin < 4; lambda = NaN;                        end
+if nargin < 5; zeroLag = true;                      end
+if nargin < 6; signLvl = 0.05;                      end
 
 if zeroLag; idx = 2; else; idx = 1; end
 
@@ -13,11 +14,11 @@ subplot(3, 2, [1 2])
     title('Residual');
     grid on;
 subplot(3, 2, 3)
-    rho = acf(Residual, maxLag, signLvl, 1, 0, zeroLag);
-    title('ACF')
+    rho = ldf(Residual, maxLag, lambda, 4, signLvl, true, zeroLag);
+    title('LDF')
 subplot(3, 2, 4)
-    phi = pacf(Residual, maxLag, signLvl, 1, zeroLag);
-    title('PACF')
+    phi = pldf(Residual, maxLag, lambda, 4, signLvl, true, zeroLag);
+    title('PLDF')
 subplot(3, 2, 5)
     normplot(rho(idx:end))
     if dagostinoK2test(rho(idx:end), signLvl);

@@ -1,4 +1,4 @@
-%% Non-Linear Timeseries Analysis Project 2023 - Testing on Power Price Data
+%% Non-Linear Timeseries Analysis Project 2023 - Testing on Rain Data from Sudan
 % Aron Paulsson and Torbjörn Onshage
 clear all;
 close all;
@@ -8,80 +8,111 @@ clc
 %% Load data
 load('proj23.mat')
 
-%%
+mod_t = ElGeneina.rain_org_t(1:300);
+mod_y = ElGeneina.rain_org(1:300);
 
-[theta, knots] = smooth_spline([100 .* mod(Kassala.rain_t(1:end-1), 1), Kassala.rain(1:end-1)], Kassala.rain(2:end), 0.01);
+val_t = ElGeneina.rain_org_t(301:382);
+val_y = ElGeneina.rain_org(301:382);
 
-ts = linspace(0, 100, 100);
-ys = linspace(0, 240, 100);
-
-[X, Y] = meshgrid(ts, ys);
-
-Yhat = 0.*X;
-
-for i = 1:100
-    Yhat(:,i) = [cox_deBoor(X(:,i), knots{1}), cox_deBoor(Y(:,i), knots{2})] * theta;
-end
-
-yhat = [cox_deBoor(100 .* mod(Kassala.rain_t(1:end-1), 1), knots{1}), cox_deBoor( Kassala.rain(1:end-1), knots{2})] * theta;
-resid =  Kassala.rain(2:end) - yhat;
-MSE = 1/length(yhat)*sum(resid.^2)
+tst_t = ElGeneina.rain_org_t(383:end);
+tst_y = ElGeneina.rain_org(383:end);
 
 figure(); hold on;
-scatter3(100 .* mod(Kassala.rain_t(1:end-1), 1), Kassala.rain(1:end-1), Kassala.rain(2:end))
-surf(X, Y, Yhat)
+plot(mod_t, mod_y)
+plot(val_t, val_y)
+plot(tst_t, tst_y)
+legend('Model Data', 'Validation Data', 'Test Data')
+title('Data Selection')
+hold off
 
-%%
+%% Initial Identification 
 
-t = ElGeneina.rain_org_t;
-y = log( ElGeneina.rain_org + 1 );
+plot_residual(mod_y, 'El Geneina Rainfall', 25, true, 0.05)
 
-firsts_idx = find(conv(y > 0, [1, -1]) > 0); firsts_idx = firsts_idx(3:end-3);
+plot_nl_residual(mod_y, 'El Geneina Rainfall', 25, 0.05, true, 0.05)
 
-histogram( mod( t(firsts_idx), 1 ), 0:1/14:1)
+figure();
+bcNormPlot(mod_y)
+title('Box-Cox Normplot')
+grid on;
 
-figure(); 
-plot( mod(t(firsts_idx(1:end-1)),1) , mod(t(firsts_idx(2:end)),1) )
+%% Examination of Variance
 
-%%
+[theta, knots] = smooth_spline(mod(mod_t, 1), mod_y, 0.00001);
 
-[theta, knots] = smooth_spline(mod(t, 1), y, 0.00001);
-
-yhat = cox_deBoor(mod(t, 1), knots{1}) * theta;
-resid = y - yhat;
-MSE = 1/length(yhat)*sum(resid.^2)
+mod_yhat = cox_deBoor(mod(mod_t, 1), knots{1}) * theta;
+mod_resid = mod_y - mod_yhat;
+MSE = 1/length(mod_yhat)*sum(mod_resid.^2)
 
 ts = linspace(0, 1, 100);
 yhat = cox_deBoor(ts, knots{1}) * theta;
 %yhat = 4.8 .* ( cos(pi.*(ts -0.62) ).^2);
 
 figure(); hold on; 
-scatter(mod(t, 1), y)
+scatter(mod(mod_t, 1), mod_y)
 plot(ts, yhat)
+title('Yearly Trend of Data')
+legend('Data', 'Smoothed Estimate')
+xlabel('Time of Year as a Fraction')
+ylabel('Rainfall [mm/month]')
 
-figure(); plot(t, resid)
-
-% Conditional Variance
-
-N = 10;
+N = 11;
 edges = linspace(0, 1, N);
 
-figure(); hold on;
-
-y_var = zeros(1, N-1);
+mod_y_var = zeros(1, N-1);
 
 for i = 1:N-1
-    idx = edges(i) <= mod(t, 1) & mod(t, 1) < edges(i+1);
+    idx = edges(i) <= mod(mod_t, 1) & mod(mod_t, 1) < edges(i+1);
     
-    y_var(i) = sum(resid( idx ).^2);
+    %mod_y_var(i) = sum(mod_resid( idx ).^2);
+    mod_y_var(i) = var( mod_y( idx ) );
 end
 
 edges = [edges(1), repelem(edges(2:end-1), 2), edges(end)];
 
-y_var = repelem(y_var, 2);
+mod_y_var = repelem(mod_y_var, 2);
 
-plot(edges, y_var, 'k-') 
+figure(); hold on;
+plot(edges, mod_y_var, 'k-')
+plot(linspace(0,1,100), 9000.*sin(pi.*linspace(0,1,100)).^2)
+title('Variance Variation Over the Year')
+hold off;
 
+N = 30;
+edges = linspace(min(mod_y), max(mod_y), N);
+
+mod_y_var = zeros(1, N-1);
+
+for i = 1:N-1
+    idx = [false; edges(i) <= mod_y(1:end-1) & mod_y(1:end-1) < edges(i+1)];
+    
+    %mod_y_var(i) = sum(mod_resid( idx ).^2);
+    mod_y_var(i) = var( mod_y( idx ) );
+end
+
+edges = [edges(1), repelem(edges(2:end-1), 2), edges(end)];
+
+mod_y_var = repelem(mod_y_var, 2);
+
+figure(); hold on;
+title('Variance Variation Over Previous Value')
+plot(edges, mod_y_var, 'k-') 
+hold off;
+
+%% Go For It
+
+func_derivative = @(X, THETA) [
+    THETA(2) .* ( THETA(1) - X(:,1) ), THETA(3) .* ones(length(X(:,1)), 1)
+];
+
+transitionFunction = @(X, THETA) X + 1/12 .* func_derivative(X, THETA);
+
+observationFunction = @(X, THETA) THETA(4).*( exp( X(:,1) .* ( 1 + sin(X(:,2)) ) ) - 1 );
+
+numStates = 2;
+numParameters = 4;
+
+[estimatedStates, estimatedParameters] = AIF_estimate(mod_y, transitionFunction, observationFunction, numStates, numParameters);
 
 
 %%
