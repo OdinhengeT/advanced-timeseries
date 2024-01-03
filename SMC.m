@@ -8,26 +8,25 @@ numSims = 1;
 % True parameter value
 true_a = 0.2;
 
-TransitionFunction_true = @(state) [true_a*state(:,1) + true_a*state(:,2), state(:,2)] + [1, 1] .* randn(1,2);
+TransitionFunction_true = @(state) [true_a*state(:,1)] + [1] .* randn(1,1);
 ObservationFunction_true = @(state) [state(:,1)] + 0.1*randn();
 
 % Generate synthetic data
 for i =1:numSims
-    true_x = zeros(T,2);
+    true_x = zeros(T,1);
     obs_y = zeros(T,1);
     Obs_Y = zeros(T,numSims);
-    true_x(1,:) = randn(1,2);
-    true_x(2,:) = true_x(1,:) + randn(1,2);
+    true_x(1,:) = randn(1,1);
     obs_y(1) = true_x(1) + randn;                                               % Initial observation
     
     for t = 3:T
         true_x(t,:) = TransitionFunction_true(true_x(t-1,:));                   % State transition equation
-        obs_y(t) = ObservationFunction_true(true_x(t-1,:));                     % Observation equation
+        obs_y(t) = ObservationFunction_true(true_x(t,:));                     % Observation equation
     end
     Obs_Y(:,i) = obs_y;
 end
 
-plot(Obs_Y)
+plot(obs_y)
 hold on
 plot(true_x(:,1))
 
@@ -237,3 +236,23 @@ subplot(2,1,2)
 plot(Obs_Y(:,i) - a_res(25,i).*X_res(:,i).*X2_res(:,i) + X2_res(:,i))
 legend('y pred resid')
 end
+
+%%
+transitionFunction = @(x, theta) [theta(:,1).*(x(:,1)), theta(:,1)];
+observationFunction = @(x,theta) x(:,1);
+numStates = 1;
+numParams = 1;
+
+[states, params] = EIF_batch_estimate(Obs_Y, observationFunction, transitionFunction, numStates, numParams);
+
+%%
+figure()
+plot(states(:,1))
+hold on
+plot(true_x(:,1))
+
+figure()
+plot(true_a.*ones(10,1));
+hold on
+plot(params)
+
