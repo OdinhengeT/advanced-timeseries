@@ -33,29 +33,26 @@ valdata = data[383:480,]
 
 model <- ctsm()
 
-model$addSystem( dR ~ ( mu*(r0 - R) )*dt + exp(p11)*dw1 )
-model$addSystem( dTheta ~ ( w )*dt + exp(p22)*dw2 )
+model$addSystem( dX1 ~ ( -w*X2 )*dt + exp(p11)*dw1 )
+model$addSystem( dX2 ~ ( w*X1 )*dt + exp(p22)*dw2 )
+model$addSystem( dX3 ~ ( c*w*X1 * exp(c*(1+X2)) * A*exp(-2*c) )*dt + exp(p33)*dw3 )
 
-#model$addSystem( dZ ~ ( exp(R*(1+sin(Theta)) - Z) - 0.5 )*dt + exp(p33)*dw3 )
-# ( mu*(r0-R)*(1+sin(Theta)) + R*w*cos(Theta))*
-
-model$addObs(obsZ ~ a*(exp(R*(1+sin(Theta))) - 1.0) )
+model$addObs(obsZ ~ X3 )
 
 model$setVariance(obsZ ~ exp(e11))
 
-model$setParameter(R = c(init = 6, lb = 0.01, ub = 10))
-model$setParameter(Theta = c(init = -pi/2, lb = -pi, ub = pi))
-model$setParameter(Z = c(init = 0, lb = -10, ub = 10))
+model$setParameter(X1 = c(init = 0.9, lb = -1.5, ub = 1.5))
+model$setParameter(X2 = c(init = 0.11, lb = -1.5, ub = 1.5))
+model$setParameter(X3 = c(init = 0.0001, lb = -0.0, ub = 10))
 
-model$setParameter(a = c(init = 1, lb = 0.1, ub = 10))
-#model$setParameter(b = c(init = 0.75, lb = 0.01, ub = 1000))
-model$setParameter(r0 = c(init = 5, lb = 0.005, ub = 10))
-model$setParameter(mu = c(init = 0.3, lb = 0.005, ub = 0.8))
+model$setParameter(A = c(init = 10, lb = 0.01, ub = 50))
+model$setParameter(c = c(init = 1, lb = 0.1, ub = 30))
+model$setParameter(phi = c(init = -pi/2, lb = -pi, ub = pi))
 model$setParameter(w = c(init = 6.4, lb = 1, ub = 10))
 
 model$setParameter(p11 = c(init = 1, lb = -9, ub = 10))
 model$setParameter(p22 = c(init = 1, lb = -9, ub = 10))
-model$setParameter(p33 = c(init = 3, lb = -9, ub = 10))
+model$setParameter(p33 = c(init = 1, lb = -9, ub = 10))
 
 model$setParameter(e11 = c(init = -1, lb = -9, ub = 10))
 
