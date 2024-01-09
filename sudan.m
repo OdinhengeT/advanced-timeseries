@@ -108,28 +108,42 @@ hold off;
 % ];
 
 A = 6;
-c = 5;
-w = 6.25;
+c = 3;
+w = 6.3;
+mu = 0.3;
 
-initParameters = [A, c, w];
+% initParameters = [A, c, w, mu];
+% numParameters = length(initParameters);
+% 
+% initStates = [0, -1, 0.002];
+% numStates = length(initStates);
+% 
+% func_derivative = @(t, X, param) [
+%     -param(3).*X(:,2) - param(4).*X(:,1).*( X(:,1).^2 + X(:,2).^2 - 1 ) ,          ...
+%      param(3).*X(:,1) - param(4).*X(:,2).*( X(:,1).^2 + X(:,2).^2 - 1 ),           ...
+%      param(2).*param(3).*X(:,1) .* exp( param(2).*( 1 + X(:,2) ) ) .* param(1).*exp(-2.*param(2))
+% ];
+%
+% observationFunction = @(X, THETA) X(:,3);
 
-initStates = [0, -1, 0.02];
+initParameters = [A, c, w, mu];
+numParameters = length(initParameters);
+
+initStates = [-1, -sqrt(3)]./2; %[-1, -1]./sqrt(2); %[0, -1];
+numStates = length(initStates);
 
 func_derivative = @(t, X, param) [
-    -param(3).*X(:,2) , param(3).*X(:,1) , param(2).*param(3).*X(:,1) .* exp( param(2).*( 1 + X(:,2) ) ) .* param(1).*exp(-2.*param(2));
+    -param(3).*X(:,2) - param(4).*X(:,1).*( X(:,1).^2 + X(:,2).^2 - 1 ), ...
+     param(3).*X(:,1) - param(4).*X(:,2).*( X(:,1).^2 + X(:,2).^2 - 1 )
 ];
 
 
 %transitionFunction = @(X, THETA) X + 1/12 .* func_derivative(X, THETA);
-
 transitionFunction = @(X, THETA) RK4step(func_derivative, THETA, 0, X, 1/12);
 
-observationFunction = @(X, THETA) X(:,3);
+observationFunction = @(X, THETA) THETA(1)*exp(-2.*THETA(2)) .* exp( THETA(2) .* (1+X(:,2)) );
 
-numStates = 3;
-numParameters = 3;
-
-[estimatedStates, estimatedParameters] = AIF_estimate(log(1+mod_y), transitionFunction, observationFunction, numStates, numParameters, initStates, initParameters);
+[estimatedStates, estimatedParameters] = AIF_estimate(mod_t, log(1+mod_y), transitionFunction, observationFunction, numStates, numParameters, initStates, initParameters);
 
 
 %%
@@ -148,27 +162,40 @@ states = reshape(estimatedStates(end, end, :), 1, length(estimatedStates(end, en
 
 for i = 1:length(val_y)
     
-    states = transitionFunction(states, initParameters);% estimatedParameters(end,:)); 
+    %states = transitionFunction(states, initParameters); 
+    %yhat_val(i) = observationFunction(states, initParameters);
     
-    yhat_val(i) = observationFunction(states, initParameters); % estimatedParameters(end,:));
+    states = transitionFunction(states, estimatedParameters(end,:)); 
+    yhat_val(i) = observationFunction(states, estimatedParameters(end,:));
 
 end
 
+y0 = zeros(length(mod_y) + length(val_y), 1);
+
+states = [-1, -sqrt(3)]./2; %initStates;
+
+for i = 1:(length(mod_y)+length(val_y))
+    states = transitionFunction(states, initParameters);% + sqrt(1/12).*0.01.*randn(1,3); 
+    y0(i) = observationFunction(states, initParameters);
+end
+
 figure(); hold on;
-plot(mod_t, log(1+mod_y))
-plot(mod_t, yhat)
-plot(val_t, log(1+val_y))
-%plot(val_t, yhat_val)
+plot(mod_t, log(1+mod_y), 'b')
+plot(mod_t, yhat, 'r')
+plot(val_t, log(1+val_y), 'b')
+plot(val_t, yhat_val, 'r')
+plot([mod_t; val_t], y0, '--k')
 hold off;
 
 %% State "Noise"
 
-estStateTran = zeros(length(mod_y), 2);
+estStateTran = zeros(length(mod_y), numStates);
 
 estStateTran(1,:) = reshape(estimatedStates(1, end, :), 1, length(estimatedStates(1, end, :)));
 
 for i = 2:length(mod_y)
-    estStateTran(i,:) = transitionFunction( estStateTran(i-1,:), initParameters);%estimatedParameters(end,:));
+    %estStateTran(i,:) = transitionFunction( estStateTran(i-1,:), initParameters);
+    estStateTran(i,:) = transitionFunction( estStateTran(i-1,:), estimatedParameters(end,:));
 end
 
 figure(); hold on;
