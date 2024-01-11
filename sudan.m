@@ -1,4 +1,4 @@
-%% Non-Linear Timeseries Analysis Project 2023 - Testing on Rain Data from Sudan
+%% Non-Linear Timeseries Analysis Project 2023 - Modeling of Rain Data from Sudan
 % Aron Paulsson and Torbjörn Onshage
 clear all;
 close all;
