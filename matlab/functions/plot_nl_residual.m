@@ -1,4 +1,5 @@
-
+%% Non-Linear Timeseries Analysis Project 2023 - Plots and Evaluates Whiteness of Residual Using Non-Linear Methods
+% Aron Paulsson and Torbjörn Onshage
 function [] = plot_nl_residual(Residual, name, maxLag, lambda, zeroLag, signLvl)
 if nargin < 2; name = '';                           end
 if nargin < 3; maxLag = 25;                         end

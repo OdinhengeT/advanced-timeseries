@@ -81,6 +81,7 @@ function [minVals, minIdxs] = minVals(y, N)
      minIdxs = y_idx(1:N);
 end
 
+% Using Epanechnikov Kernel instead of the standard Tri-cubic Kernel
 function K = kernel(u)
     K = 0.75.*(1 - u.^2);
 end

@@ -8,20 +8,26 @@ clc
 %% Load data
 load('proj23.mat')
 
-mod_t = ElGeneina.rain_org_t(1:300);
-mod_y = ElGeneina.rain_org(1:300);
+mod_t = ElGeneina.rain_org_t(1:382);
+mod_y = ElGeneina.rain_org(1:382);
 
-val_t = ElGeneina.rain_org_t(301:382);
-val_y = ElGeneina.rain_org(301:382);
+val_t = ElGeneina.rain_org_t(383:end);
+val_y = ElGeneina.rain_org(383:end);
 
-tst_t = ElGeneina.rain_org_t(383:end);
-tst_y = ElGeneina.rain_org(383:end);
+% mod_t = ElGeneina.rain_org_t(1:300);
+% mod_y = ElGeneina.rain_org(1:300);
+% 
+% val_t = ElGeneina.rain_org_t(301:382);
+% val_y = ElGeneina.rain_org(301:382);
+% 
+% tst_t = ElGeneina.rain_org_t(383:end);
+% tst_y = ElGeneina.rain_org(383:end);
 
 figure(); hold on;
 plot(mod_t, mod_y)
 plot(val_t, val_y)
-plot(tst_t, tst_y)
-legend('Model Data', 'Validation Data', 'Test Data')
+%plot(tst_t, tst_y)
+legend('Model Data', 'Validation Data')%, 'Test Data')
 title('Data Selection')
 hold off
 
@@ -65,7 +71,7 @@ for i = 1:N-1
     idx = edges(i) <= mod(mod_t, 1) & mod(mod_t, 1) < edges(i+1);
     
     %mod_y_var(i) = sum(mod_resid( idx ).^2);
-    mod_y_var(i) = var( mod_y( idx ) );
+    mod_y_var(i) = var( log(1 + mod_y( idx )/0.75 ) );
 end
 
 edges = [edges(1), repelem(edges(2:end-1), 2), edges(end)];
@@ -74,7 +80,6 @@ mod_y_var = repelem(mod_y_var, 2);
 
 figure(); hold on;
 plot(edges, mod_y_var, 'k-')
-plot(linspace(0,1,100), 9000.*sin(pi.*linspace(0,1,100)).^2)
 title('Variance Variation Over the Year')
 hold off;
 
@@ -99,7 +104,27 @@ title('Variance Variation Over Previous Value')
 plot(edges, mod_y_var, 'k-') 
 hold off;
 
-%% Go For It
+%% CTSM-R Residual Examination
+clear all
+clc
+
+load('mod_resid_tf');
+plot_residual(x, 'Model Residual in Transformed Domain')
+plot_nl_residual(x, 'Model Residual in Transformed Domain', 25, 0.05)
+
+load('mod_resid');
+plot_residual(x, 'Model Residual')
+plot_nl_residual(x, 'Model Residual', 25, 0.05)
+
+load('val_resid_tf');
+plot_residual(x, 'Validation Residual in Transformed Domain')
+plot_nl_residual(x, 'Validation Residual in Transformed Domain', 25, 0.05)
+
+load('val_resid');
+plot_residual(x, 'Validation Residual')
+plot_nl_residual(x, 'Validation Residual', 25, 0.05)
+
+%% Attempt Parameter Estimation Using AIF/IF2/SMC/EIF
 
 % initParameters = [ 1.35, 0.75, 6.3, 3];
 % 

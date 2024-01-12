@@ -1,110 +1,154 @@
-clear all
-close all
-addpath('functions', 'data');
-clc
-
-delta_t = 0.0001;
-T = 10;
-
-sigma = 0.00001;
-
-x0 = 3;
-x = zeros( 1, ceil(T/delta_t)+1 );
-
-x(:, 1) = x0;
-
-a = -0.3;
-
-for t = 2:length(x)
-    x(:, t) = (1 + a * delta_t) * x(:,t-1) + sigma * sqrt(delta_t) * randn(1);
-end
-
-t = 0:delta_t:T;
-
-figure(); hold on;
-plot(t, x(1,:), '-')
-plot(t, x0.*exp(a.*t), 'k--')
-hold off;
-
-figure(); hold on;
-scatter(x(1, 1:end-1), x(1, 2:end))
-
-dx =  (x(1, 3:end) -  x(1, 1:end-2)) / (2 .* delta_t);
-
-figure(); hold on;
-scatter(x(1, 2:end-1), dx)
-
-%%
+%% SDE 1
 clear all;
 close all;
+addpath('functions', 'data');
 clc;
 
-param = [3.2, 0.02, 6.29];
+A = 100;
+c = 5;
+w = 6.29;
+mu = 0.1;
+
+param = [A, c, w, mu];
 
 func_derivative = @(t, X, param) [
-    -param(3) .* X(2,:) - 0.05 .* X(1,:) .* ( X(1,:).^2 + X(2,:).^2 - param(1).^2 );
-     param(3) .* X(1,:) - 0.05 .* X(2,:) .* ( X(1,:).^2 + X(2,:).^2 - param(1).^2 )
+    -param(3) .* X(2,:) - param(4) .* X(1,:) .* ( X(1,:).^2 + X(2,:).^2 - 1 );
+     param(3) .* X(1,:) - param(4) .* X(2,:) .* ( X(1,:).^2 + X(2,:).^2 - 1 )
 ];
 
-dt = 1/12;
+dt = 1/12000;
 
-T = 30;
-Y_0 = [param(1), 0];
+transitionFunction = @(t, X, param, dt) EEstep(func_derivative, param, 0, X, dt);
 
-Y = zeros( 2, ceil(T/dt)+1 );
-Y(:,1) = Y_0;
+observationFunction = @(t, X, param) param(1)*exp(-2.*param(2)) .* ( exp( param(2) .* (1+X(2,:)) ) - 1 );
 
-sigma = 0.2;
+T = 25;
+
+X = zeros( 2, ceil(T/dt)+1 );
+X(:,1) = [-1, 0];
+
+Y = zeros( 1, ceil(T/dt)+1 );
+Y(:,1) = observationFunction(0, X(:,1), param);
 
 for t = 2:length(Y)
     
-    rad_noise = 0.1 .* sqrt(dt) .* randn(1) .* Y(:, t-1)./norm(Y(:, t-1));
-    
-    phase_noise = 0.2 .* sqrt(dt) .* randn(1) .* [Y(2, t-1); -Y(1, t-1)]./norm(Y(:, t-1));
-    
-    Y(:,t) = RK4step(func_derivative, param, t*dt, Y(:,t-1), dt) + 0.2 .* [0;1] .* sqrt(dt) .* randn(1);
-    
-    % + rad_noise + phase_noise;
+    X(:,t) = transitionFunction(0, X(:,t-1), param, dt) + 0.025 .* sqrt(dt) .* randn(2,1);
+    Y(:,t) = observationFunction(0, X(:,t-1), param) + 0.25 .* randn(1);
+   
 end
 
 t = 0:dt:T;
-Y3 = param(2).* ( exp(param(1) + Y(2,:) ) - 1 );
 
 figure('Position', [100, 100, 800, 400]);
 subplot(1,2,1); hold on;
-plot(t, Y(1,:))
-plot(t, Y(2,:))
-plot(t, param(1)*cos(param(3)*t), '--')
+plot(t, X(1,:))
+plot(t, X(2,:))
 title('Realizations')
-legend('Y1', 'Y2', 'a cos(wt)')
+legend('X1', 'X2')
 xlabel('time')
 ylabel('Value')
 grid on; hold off;
 subplot(1,2,2); hold on;
-plot(Y(1,:), Y(2,:))
+plot(X(1,:), X(2,:))
 title('Phase Portrait')
-xlabel('Y1')
-ylabel('Y2')
+xlabel('X1')
+ylabel('X2')
 grid on; hold off;
-sgtitle({'Simulation of my SDE'})
+sgtitle({'Simulation of SDE 1'})
 
 figure('Position', [100, 100, 800, 400]);
 subplot(1,2,1); hold on;
-plot(t, Y3)
+plot(t, Y)
 title('Realizations')
-legend('Y3')
+legend('Y')
 xlabel('time')
 ylabel('Value')
 grid on; hold off;
 subplot(1,2,2); hold on;
-plot(Y(1,:), Y3)
+plot(X(1,:), Y)
 title('Phase Portrait')
-xlabel('Y1')
-ylabel('Y2')
+xlabel('X1')
+ylabel('Y')
 grid on; hold off;
-sgtitle({'Simulation of my SDE'})
+sgtitle({'Simulation of SDE 1'})
 
-%%
+%% SDE 2
+clear all;
+close all;
+addpath('functions', 'data');
+clc;
+
+A = 100;
+c = 5;
+w = 6.29;
+mu = 0.1;
+
+param = [A, c, w, mu];
+
+func_derivative = @(t, X, param) [
+    -param(3) .* X(2,:) - param(4) .* X(1,:) .* ( X(1,:).^2 + X(2,:).^2 - 1 );
+     param(3) .* X(1,:) - param(4) .* X(2,:) .* ( X(1,:).^2 + X(2,:).^2 - 1 );
+     param(2) .* param(3) .* X(1,:) .* exp( param(2) .* (1+X(2,:)) ) .* A .* exp(-2.*param(2))
+];
+
+dt = 1/120;
+
+transitionFunction = @(t, X, param, dt) RK4step(func_derivative, param, 0, X, dt);
+
+observationFunction = @(t, X, param) X(3,:);
+
+T = 25;
+
+X = zeros( 3, ceil(T/dt)+1 );
+X(:,1) = [-1, 0, 0.02];
+
+Y = zeros( 1, ceil(T/dt)+1 );
+Y(:,1) = observationFunction(0, X(:,1), param);
+
+for t = 2:length(Y)
+    
+    X(:,t) = transitionFunction(0, X(:,t-1), param, dt) + 0.025 .* sqrt(dt) .* randn(3,1);
+    Y(:,t) = observationFunction(0, X(:,t-1), param) + 0.25 .* randn(1);
+   
+end
+
+t = 0:dt:T;
+
+figure('Position', [100, 100, 800, 400]);
+subplot(1,2,1); hold on;
+plot(t, X(1,:))
+plot(t, X(2,:))
+title('Realizations')
+legend('X1', 'X2')
+xlabel('time')
+ylabel('Value')
+grid on; hold off;
+subplot(1,2,2); hold on;
+plot(X(1,:), X(2,:))
+title('Phase Portrait')
+xlabel('X1')
+ylabel('X2')
+grid on; hold off;
+sgtitle({'Simulation of SDE 2'})
+
+figure('Position', [100, 100, 800, 400]);
+subplot(1,2,1); hold on;
+plot(t, Y)
+title('Realizations')
+legend('Y')
+xlabel('time')
+ylabel('Value')
+grid on; hold off;
+subplot(1,2,2); hold on;
+plot(X(1,:), Y)
+title('Phase Portrait')
+xlabel('X1')
+ylabel('Y')
+grid on; hold off;
+sgtitle({'Simulation of SDE 2'})
+
+
+%% Other Testing
 clear all;
 close all;
 clc;

@@ -23,22 +23,62 @@ N = 250;
 x = linspace(-4, 12, N);
 y = -0.02*x.^3 + 0.23.*x.^2 + randn(1,N);
 
+%%
+
 x_eval = linspace(-4.5, 12.5, 2*N);
 
-lambda = 0.01; % NaN if algorithm should select
+lambda = NaN;%0.01; % NaN if algorithm should select
 [theta, knots, lambda] = smooth_spline(x, y, lambda);
 yhat_ss = cox_deBoor(x_eval, knots{1}, 4)*theta;
 
-alpha = 0.1; % NaN if algorithm should select
+alpha = NaN;%0.15; % NaN if algorithm should select
 [yhat_loess, alpha] = loess(x, y, x_eval, alpha);
 
 figure(); hold on;
+title('LOESS and Smoothing Splines Fit')
 plot(x_eval, yhat_loess, '-')
 plot(x_eval, yhat_ss, '-')
 scatter(x, y, '.k');
+xlabel('X')
+ylabel('Y')
 legend(['LOESS: ', num2str(alpha)], ['Smoothing Splines: ', num2str(lambda)], 'Data')
 
 %% Test: Smoothing Splines, Multivariable
+
+N = 2500;
+Ns = 100;
+
+xs = linspace(-0.1, 1.1, Ns);
+
+x1 = randn(N, 1); 
+x2 = randn(N, 1); 
+
+%y = 4*x1.^2.*(1-x1) + 0.5.*(x2-0.5) +  0.01 .* randn(N, 1);
+y = 0.2.*sin(2.*pi.*x1.*x2) + 0.01 .* randn(N,1);
+
+[theta, knots] = smooth_spline([x1, x2] , y, 0.000002, 4, [-0.1, -0.1; 1.1, 1.1]);
+
+yhat = [cox_deBoor(x1, knots{1}), cox_deBoor(x2, knots{2})] * theta;
+
+resid = y - yhat;
+MSE = 1/length(yhat)*sum(resid.^2)
+
+[X, Y] = meshgrid(xs, xs);
+
+Yhat = 0.*X;
+
+for i = 1:Ns
+    Yhat(:,i) = [cox_deBoor(X(:,i), knots{1}), cox_deBoor(Y(:,i), knots{2})] * theta;
+end
+
+figure(); hold on;
+scatter3(x1, x2, y)
+surf(X, Y, Yhat)
+xlabel("x")
+ylabel("y")
+zlabel("z")
+
+%% another test
 
 N = 1000;
 Ns = 100;
@@ -87,34 +127,4 @@ xlabel("y(t-2)")
 ylabel("y(t-1)")
 zlabel("Y(t)")
 
-N = 2500;
-Ns = 100;
 
-xs = linspace(-0.1, 1.1, Ns);
-
-x1 = rand(N, 1); 
-x2 = rand(N, 1); 
-
-y = 4*x1.^2.*(1-x1) + 0.5.*(x2-0.5) +  0.01 .* randn(N, 1); % 0.2.*sin(2.*pi.*x1.*x2) +
-
-[theta, knots] = smooth_spline([x1, x2] , y, 0.000002, 4, [-0.1, -0.1; 1.1, 1.1]);
-
-yhat = [cox_deBoor(x1, knots{1}), cox_deBoor(x2, knots{2})] * theta;
-
-resid = y - yhat;
-MSE = 1/length(yhat)*sum(resid.^2)
-
-[X, Y] = meshgrid(xs, xs);
-
-Yhat = 0.*X;
-
-for i = 1:Ns
-    Yhat(:,i) = [cox_deBoor(X(:,i), knots{1}), cox_deBoor(Y(:,i), knots{2})] * theta;
-end
-
-figure(); hold on;
-scatter3(x1, x2, y)
-surf(X, Y, Yhat)
-xlabel("x")
-ylabel("y")
-zlabel("z")

@@ -34,8 +34,10 @@ function [theta, knots, lambda] = smooth_spline(x, y, lambda, order, x_range)
         lambdas = [0.1, 0.01, 0.001, 0.0001, 0.00001];
         MSEs = zeros(1, length(lambdas));
         
-        nbrTestPoints = ceil(min([ sqrt(0.3.*N), 200 + N.^0.2 ]));
+        %nbrTestPoints = ceil(min([ sqrt(0.3.*N), 200 + N.^0.2 ]));
 
+        nbrTestPoints = round( min([ sqrt(0.3.*N)+min([0.04.*N, 3]), 200+N.^0.2 ]) );
+        
         for repeats = 1:5
             idxTestPoints =  randperm(N, nbrTestPoints);
 
@@ -104,7 +106,7 @@ function [omega] = penalty_matrix(knots, order)
     
     B = cox_deBoor(x_tilde, knots, order, 2);
     
-    omega = B'*diag(weights)*B;
+    omega = (B.*weights)'*B; % This is the same as B'*diag(weights)*B;
 end
 
 % Enormous Thanks to Greg von Winckel for publishing this script

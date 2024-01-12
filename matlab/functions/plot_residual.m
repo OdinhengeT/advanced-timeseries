@@ -1,4 +1,5 @@
-
+%% Timeseries Analysis Project 2022 - Plots and Evaluates Whiteness of Residual
+% Aron Paulsson and Torbjörn Onshage
 function [] = plot_residual(Residual, name, maxLag, zeroLag, signLvl)
 if nargin < 5; signLvl = 0.05;                      end
 if nargin < 4; zeroLag = true;                      end
